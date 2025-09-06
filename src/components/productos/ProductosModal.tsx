@@ -34,6 +34,9 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
   
   // Modal de proveedor
   const [proveedorModalOpen, setProveedorModalOpen] = useState(false);
+  
+  // Estado para forzar actualización del selector de proveedores
+  const [refreshProveedores, setRefreshProveedores] = useState(0);
 
   // Prevenir scroll del body cuando el modal está abierto
   useEffect(() => {
@@ -62,6 +65,8 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
       });
     }
     setErrors({});
+    // Resetear el trigger cuando se abra/cierre el modal
+    setRefreshProveedores(0);
   }, [producto, isOpen]);
 
   const validateForm = () => {
@@ -138,18 +143,35 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
   };
 
   const handleSaveProveedor = async (proveedorData: Omit<Proveedor, 'id'> | Proveedor) => {
-    const result = await createProveedor(proveedorData as Omit<Proveedor, 'id'>) as Proveedor | boolean;
-    
-    if (result && typeof result === 'object' && 'id' in result) {
-      // Si createProveedor retorna el proveedor creado con su ID
-      setProveedorModalOpen(false);
-      // Seleccionar automáticamente el proveedor recién creado
-      setFormData(prev => ({ ...prev, proveedorId: result.id }));
-      // Limpiar error de proveedor si existía
-      setErrors(prev => ({ ...prev, proveedor: '' }));
-    } else if (result === true) {
-      // Si solo retorna true, cerrar modal (el selector se actualizará automáticamente)
-      setProveedorModalOpen(false);
+    try {
+      const result = await createProveedor(proveedorData as Omit<Proveedor, 'id'>) as Proveedor | boolean;
+      
+      if (result && typeof result === 'object' && 'id' in result) {
+        // Si createProveedor retorna el proveedor creado con su ID
+        setProveedorModalOpen(false);
+        
+        // Seleccionar automáticamente el proveedor recién creado
+        setFormData(prev => ({ ...prev, proveedorId: result.id }));
+        
+        // Limpiar error de proveedor si existía
+        setErrors(prev => ({ ...prev, proveedor: '' }));
+        
+        // Forzar actualización del selector de proveedores
+        setRefreshProveedores(prev => prev + 1);
+        
+      } else if (result === true) {
+        // Si solo retorna true, necesitamos una forma de obtener el ID del nuevo proveedor
+        setProveedorModalOpen(false);
+        
+        // Forzar actualización del selector de proveedores
+        setRefreshProveedores(prev => prev + 1);
+        
+        // Nota: En este caso no podemos auto-seleccionar el proveedor porque no tenemos su ID
+        // El usuario tendrá que seleccionarlo manualmente de la lista actualizada
+      }
+    } catch (error) {
+      console.error('Error al crear proveedor:', error);
+      // Manejar error según sea necesario
     }
   };
 
@@ -250,6 +272,7 @@ export const ProductoModal: React.FC<ProductoModalProps> = ({
             error={errors.proveedor}
             disabled={saving}
             onCreateNew={handleCreateProveedor}
+            refreshTrigger={refreshProveedores} // Agregar esta prop
           />
 
           <div className="flex space-x-3 pt-4">

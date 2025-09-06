@@ -10,6 +10,7 @@ interface ProveedorSelectorProps {
   error?: string;
   disabled?: boolean;
   onCreateNew?: () => void;
+  refreshTrigger?: number; // Para forzar actualización
 }
 
 export const ProveedorSelector: React.FC<ProveedorSelectorProps> = ({
@@ -17,7 +18,8 @@ export const ProveedorSelector: React.FC<ProveedorSelectorProps> = ({
   onChange,
   error,
   disabled,
-  onCreateNew
+  onCreateNew,
+  refreshTrigger = 0
 }) => {
   const { proveedores, loading, refetch } = useProveedores();
   const [isOpen, setIsOpen] = useState(false);
@@ -26,6 +28,13 @@ export const ProveedorSelector: React.FC<ProveedorSelectorProps> = ({
   useEffect(() => {
     refetch();
   }, []);
+
+  // Refrescar cuando cambie refreshTrigger
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      refetch();
+    }
+  }, [refreshTrigger, refetch]);
 
   // Filtrar solo proveedores activos
   const proveedoresActivos = proveedores.filter(p => p.activo);
@@ -40,12 +49,10 @@ export const ProveedorSelector: React.FC<ProveedorSelectorProps> = ({
     e.preventDefault();
     e.stopPropagation();
     setIsOpen(false);
-    // Usar setTimeout para asegurar que el dropdown se cierre antes de abrir el modal
-    setTimeout(() => {
-      if (onCreateNew) {
-        onCreateNew();
-      }
-    }, 100);
+    
+    if (onCreateNew) {
+      onCreateNew();
+    }
   };
 
   return (
